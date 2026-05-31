@@ -39,7 +39,6 @@ import tempfile
 import copy
 import platform
 import shutil
-import subprocess
 import socket
 from pptx.oxml import parse_xml
 import uuid
@@ -94,6 +93,7 @@ except:
 
 try:
     import mmdc
+    from mmdc import MermaidConverter
 
     have_mmdc = True
 
@@ -1576,88 +1576,36 @@ def handleMermaid(slide, renderingRectangle, codeLines, codeType):
     tempDir = globals.processingOptions.getCurrentOption("tempDir")
     exportGraphics = globals.processingOptions.getCurrentOption("exportGraphics")
     mermaidSource = "\n".join(codeLines)
-    sourceFile = None
-    pngFile = None
+    converter = MermaidConverter()
     svgFile = None
     convertedFile = None
 
     try:
-        sourceFileObject = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".mmd", dir=tempDir, mode="w", encoding="utf-8"
+        svgContent = converter.convert(
+            input=mermaidSource,
+            output_file=None,
+            background="white",
         )
-        sourceFileObject.write(mermaidSource)
-        sourceFileObject.close()
-        sourceFile = sourceFileObject.name
 
-        pngFileObject = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".png", dir=tempDir
-        )
-        pngFile = pngFileObject.name
-        pngFileObject.close()
-        os.remove(pngFile)
+        if isinstance(svgContent, str) is False or svgContent == "":
+            raise RuntimeError("No Mermaid SVG output was created.")
 
         svgFileObject = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".svg", dir=tempDir
+            delete=False, suffix=".svg", dir=tempDir, mode="w", encoding="utf-8"
         )
-        svgFile = svgFileObject.name
+        svgFileObject.write(svgContent)
         svgFileObject.close()
-        os.remove(svgFile)
+        svgFile = svgFileObject.name
 
-        pngResult = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "mmdc",
-                "-i",
-                sourceFile,
-                "-o",
-                pngFile,
-                "-w",
-                "1920",
-                "-s",
-                "2",
-                "-b",
-                "white",
-            ],
-            capture_output=True,
-            text=True,
+        convertedFileObject = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".png", dir=tempDir
         )
+        convertedFile = convertedFileObject.name
+        convertedFileObject.close()
 
-        if Path(pngFile).exists() and Path(pngFile).stat().st_size > 0:
-            addRenderedGraphic(slide, renderingRectangle, pngFile)
-            return True
-
-        svgResult = subprocess.run(
-            [
-                sys.executable,
-                "-m",
-                "mmdc",
-                "-i",
-                sourceFile,
-                "-o",
-                svgFile,
-                "-b",
-                "white",
-            ],
-            capture_output=True,
-            text=True,
-        )
-
-        if Path(svgFile).exists() and Path(svgFile).stat().st_size > 0 and have_cairosvg:
-            convertedFileObject = tempfile.NamedTemporaryFile(
-                delete=False, suffix=".png", dir=tempDir
-            )
-            convertedFile = convertedFileObject.name
-            convertedFileObject.close()
-            cairosvg.svg2png(url=svgFile, write_to=convertedFile)
-            addRenderedGraphic(slide, renderingRectangle, convertedFile)
-            return True
-
-        errorMessage = pngResult.stdout + pngResult.stderr
-        if 'Exception:' not in errorMessage:
-            errorMessage += svgResult.stdout + svgResult.stderr
-
-        raise RuntimeError(errorMessage.strip() or "No Mermaid output file was created.")
+        cairosvg.svg2png(url=svgFile, write_to=convertedFile)
+        addRenderedGraphic(slide, renderingRectangle, convertedFile)
+        return True
 
     except Exception as e:
         sys.stderr.write("Mermaid render failed. Rendering as backticks.\n")
@@ -1667,7 +1615,7 @@ def handleMermaid(slide, renderingRectangle, codeLines, codeType):
 
     finally:
         if exportGraphics is False:
-            for filename in [sourceFile, pngFile, svgFile, convertedFile]:
+            for filename in [svgFile, convertedFile]:
                 if filename is not None and Path(filename).exists():
                     os.remove(filename)
 
