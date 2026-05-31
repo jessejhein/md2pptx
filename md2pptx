@@ -92,8 +92,7 @@ except:
 # Flag availability or otherwise
 
 try:
-    import mmdc
-    from mmdc import MermaidConverter
+    import mermaid
 
     have_mmdc = True
 
@@ -1575,49 +1574,20 @@ def handleGraphViz(slide, renderingRectangle, codeLines, codeType):
 def handleMermaid(slide, renderingRectangle, codeLines, codeType):
     tempDir = globals.processingOptions.getCurrentOption("tempDir")
     exportGraphics = globals.processingOptions.getCurrentOption("exportGraphics")
-    mermaidSource = "\n".join(codeLines)
-    converter = MermaidConverter()
-    svgFile = None
-    convertedFile = None
+    renderer = mermaid.MermaidRenderer(tempDir, exportGraphics)
 
     try:
-        svgContent = converter.convert(
-            input=mermaidSource,
-            output_file=None,
-            background="white",
+        return renderer.render_slide(
+            slide,
+            renderingRectangle,
+            codeLines,
+            addRenderedGraphic,
         )
-
-        if isinstance(svgContent, str) is False or svgContent == "":
-            raise RuntimeError("No Mermaid SVG output was created.")
-
-        svgFileObject = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".svg", dir=tempDir, mode="w", encoding="utf-8"
-        )
-        svgFileObject.write(svgContent)
-        svgFileObject.close()
-        svgFile = svgFileObject.name
-
-        convertedFileObject = tempfile.NamedTemporaryFile(
-            delete=False, suffix=".png", dir=tempDir
-        )
-        convertedFile = convertedFileObject.name
-        convertedFileObject.close()
-
-        cairosvg.svg2png(url=svgFile, write_to=convertedFile)
-        addRenderedGraphic(slide, renderingRectangle, convertedFile)
-        return True
-
     except Exception as e:
         sys.stderr.write("Mermaid render failed. Rendering as backticks.\n")
         sys.stderr.write(str(e) + "\n")
 
         return False
-
-    finally:
-        if exportGraphics is False:
-            for filename in [svgFile, convertedFile]:
-                if filename is not None and Path(filename).exists():
-                    os.remove(filename)
 
 
 def handleFunnel(slide, renderingRectangle, codeLines, codeType):
@@ -4803,7 +4773,7 @@ else:
     print("  graphviz: Not Installed")
 
 if have_mmdc:
-    print("  mmdc: " + getattr(mmdc, "__version__", "Installed"))
+    print("  mmdc: " + mermaid.mmdc_version)
 else:
     print("  mmdc: Not Installed")
 
