@@ -80,105 +80,37 @@ Good GraphViz coding-session scenarios:
 - Dependency graph: markdown, md2pptx, python-pptx, GraphViz, CairoSVG, output.
 - Incident decision tree: alert, reproduce, patch, rollback, observe, escalate.
 
-## Known Bad Or Fragile Areas
+## Current Fragile Areas
 
-These were disabled in the stress deck so it could build and open cleanly.
+The parser issues found during the stress-deck build have been repaired in `md2pptx` and the corresponding markdown controls have been re-enabled in `pptx-test`.
 
-### TOC metadata
+Fixed areas:
 
-Disabled lines included:
+- Styled TOC rendering now flattens nested bullet lists locally and normalizes TOC section link keys.
+- Dynamic `addTableRowLines` / `addTableColumnLines` uses `sortedNumericList()` from `processingOptions.py`.
+- `addTableLines: both` is accepted as the documented alias for all-cell-edge table lines.
+- Dynamic card graphic metadata accepts `cardGraphicSize`, `cardGraphicPadding`, and `cardGraphicPosition` case-insensitively, then stores canonical camelCase option names.
+- Dynamic funnel metadata accepts documented `funnelLabelsPosition` plus singular `funnelLabelPosition`, parses dynamic funnel colours through `parseColour()`, and stores canonical camelCase option names.
 
-```text
-tocStyle: circle
-tocTitle: Topics
-tocLinks: yes
-tocItemColour: E7EEF8
-tocFontSize: 12
-tocItemHeight: 1.1
-tocRowGap: 0.4
-sectionArrows: yes
-sectionArrowsColour: E7EEF8
-SectionsExpand: yes
-```
+Remaining intentional exclusions:
 
-Failure: `createTOCSlide()` crashes because `SlideInfo.bullets` is a list of bullet lists, but TOC code iterates it as if each item were a single `[level, text, type]` triple.
+- Embedded audio/video slides are still excluded from the default stress deck. LibreOffice media playback and poster handling was unstable and could hang review.
+- Slide notes appeared to hang LibreOffice review on one machine. Track this in `pptx-test/TODO.md` and test on another machine before drawing conclusions about PowerPoint behavior.
+- Single-row three-image tables should still be avoided; use documented image layouts instead.
 
-Do not re-enable TOC in the stress deck until md2pptx flattens TOC bullets locally.
+## Option Casing
 
-### Table dynamic line metadata
+Deck authors can use camelCase or lowercase option names. Top-level and dynamic metadata keys are lowercased while parsing, and `ProcessingOptions` stores option keys in lowercase internally.
 
-Disabled lines included:
+Prefer documenting and writing options in canonical camelCase because that matches default declarations and read sites, for example:
 
-```text
-<!-- md2pptx: tableheadingsize: 16 -->
-<!-- md2pptx: addtablelines: both -->
-<!-- md2pptx: addtablerowlines: 1 -->
-<!-- md2pptx: addtablecolumnlines: 1 2 -->
-<!-- md2pptx: addtablelinecolour: 808080 -->
-```
+- `cardGraphicPadding`
+- `funnelLabelsPosition`
+- `funnelBorderColour`
+- `addTableLines`
+- `tocStyle`
 
-Failure: dynamic `addTableRowLines` / `addTableColumnLines` calls `sortedNumericList()` from `processingOptions.py`, but that helper is defined in `md2pptx`, not in `processingOptions.py`.
-
-Also, docs say `addTableLines: both`, while renderer appears to handle `all`. Treat this as a code/docs mismatch.
-
-### Card graphic dynamic metadata
-
-Disabled line:
-
-```text
-<!-- md2pptx: cardgraphicpadding: 0.1 -->
-```
-
-Failure: dynamic metadata parser lowercases keys but compares some keys against camelCase names, so this is rejected as invalid. Top-level `cardGraphicPadding` metadata is supported.
-
-### Funnel dynamic metadata
-
-Disabled lines included:
-
-```text
-<!-- md2pptx: funnelcolours: ACCENT 1, ACCENT 2, ACCENT 3, ACCENT 4, ACCENT 5 -->
-<!-- md2pptx: funnelbordercolour: ACCENT 6 -->
-<!-- md2pptx: funneltitlecolour: TEXT 1 -->
-<!-- md2pptx: funneltextcolour: TEXT 1 -->
-<!-- md2pptx: funnellabelspercent: 18 -->
-<!-- md2pptx: funnellabelsposition: after -->
-<!-- md2pptx: funnelwidest: pipe -->
-```
-
-Failures:
-
-- `funnelLabelsPosition` is documented, but dynamic code accepts singular `funnelLabelPosition`.
-- Dynamic funnel border/title/text color values are stored as raw strings, but rendering expects parsed `(type, value)` tuples from `parseColour()`.
-
-Use default funnel styling in stress decks until code is fixed.
-
-### Media slides
-
-Audio/video slides were removed. LibreOffice media playback and poster handling was unstable and could hang review. The poster images came from the repo's battery sample images.
-
-Do not include embedded audio/video in the default stress deck unless specifically testing media behavior.
-
-### Notes review
-
-Slide notes appeared to hang LibreOffice review on one machine. Track this in `pptx-test/TODO.md` and test on another machine before drawing conclusions about PowerPoint behavior.
-
-## Minimal Code Repair Plan
-
-There is an untracked local plan in:
-
-```text
-/home/heinjj/Compile/md2pptx/.plans/repair-toc-and-dynamic-metadata.md
-```
-
-The plan keeps fixes local:
-
-- Add a helper that flattens bullet lists for TOC rendering.
-- Add or move `sortedNumericList()` into `processingOptions.py`.
-- Normalize dynamic metadata keys using lowercase comparisons.
-- Parse dynamic funnel colors with `parseColour()`.
-- Treat `addTableLines: both` as equivalent to `all`.
-
-Do not change parser architecture, `SlideInfo`, or slide sequencing unless a minimal local fix is impossible.
+The lower-case dynamic forms in the stress deck are accepted input aliases, not separate option names.
 
 ## Repro And Validation
 
@@ -190,13 +122,13 @@ Isolated repro decks were created under:
 
 Useful repros:
 
-- `toc.md`: TOC crash.
-- `table-lines.md`: dynamic row/column line crash.
-- `card-padding.md`: invalid dynamic key warning.
-- `funnel-colour.md`: dynamic color tuple crash.
-- `funnel-labels.md`: invalid dynamic key warning.
+- `toc.md`: styled TOC and TOC links.
+- `table-lines.md`: dynamic row/column line metadata.
+- `card-padding.md`: dynamic card graphic padding.
+- `funnel-colour.md`: dynamic funnel colour metadata.
+- `funnel-labels.md`: documented funnel label-position alias.
 
-After code fixes, each repro should build with:
+Each repro should build with:
 
 ```bash
 cd /home/heinjj/Compile/md2pptx
@@ -205,18 +137,12 @@ uv run python ./md2pptx \
   /home/heinjj/Compile/pptx-test/tmp/repro/toc.pptx
 ```
 
-Then re-enable the disabled stress-deck features one group at a time in `pptx-test`, committing each markdown re-enable with an explanation.
+The stress deck should build with all repaired TOC, table, card, and funnel metadata enabled. If a future change breaks one of these, prefer creating or updating a small repro in `pptx-test/tmp/repro` before changing the full stress deck.
 
 ## Current Stress Deck State
 
-The stress deck currently builds with `uv run python ./md2pptx`.
+The stress deck currently builds with `uv run python ./md2pptx` and includes the repaired TOC, dynamic table line, card graphic padding, and funnel styling metadata.
 
 The Flatpak LibreOffice path can convert it to PDF when input and output are under `/home/heinjj/...`.
 
-The deck intentionally avoids:
-
-- TOC-specific styling metadata.
-- Dynamic table line metadata.
-- Dynamic funnel styling metadata.
-- Dynamic card graphic padding.
-- Embedded audio/video.
+The deck intentionally avoids embedded audio/video.
