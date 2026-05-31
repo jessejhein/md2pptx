@@ -1,6 +1,6 @@
 ---
 name: md2pptx
-description: Build, test, and debug md2pptx Markdown-to-PowerPoint decks, including GraphViz, image layouts, tables, cards, funnels, inline Python, uv-managed dependencies, and LibreOffice Flatpak validation. Use when creating or repairing md2pptx markdown decks or diagnosing md2pptx parser/rendering issues.
+description: Build, test, and debug md2pptx Markdown-to-PowerPoint decks, including GraphViz, Mermaid, image layouts, tables, cards, funnels, inline Python, uv-managed dependencies, and LibreOffice Flatpak validation. Use when creating or repairing md2pptx markdown decks or diagnosing md2pptx parser/rendering issues.
 ---
 
 # md2pptx
@@ -31,11 +31,14 @@ The project has `pyproject.toml` and `uv.lock` with the needed runtime dependenc
 
 - `python-pptx`
 - `graphviz`
+- `mmdc`
 - `cairosvg`
 - `pillow`
 - `lxml`
 
 GraphViz requires both the system Graphviz executable and the Python `graphviz` package.
+
+Mermaid rendering uses the Python `mmdc` package. If `mmdc` is unavailable, ` ```mermaid ` blocks warn and fall back to ordinary code rendering.
 
 ## LibreOffice Testing
 
@@ -67,6 +70,7 @@ Prefer feature-rich but stable markdown:
 - Use `*` for bullets. `-` starts Taskpaper tasks.
 - Use absolute local paths for test assets to avoid cwd ambiguity.
 - Use ` ```dot ` blocks for GraphViz diagrams.
+- Use ` ```mermaid ` blocks for Mermaid diagrams.
 - Use documented image layouts: one image, two side-by-side images, two-over-one, one-over-two, two-by-two, or one-over-one.
 - Avoid single-row three-image tables. They may render as literal `!` markers.
 - Use `<figcaption>` only immediately below a single image.
@@ -121,6 +125,8 @@ Isolated repro decks were created under:
 ```
 
 Useful repros:
+
+- `mermaid-test.md`: focused Mermaid coverage deck in `/home/heinjj/Compile/pptx-test`.
 
 - `toc.md`: styled TOC and TOC links.
 - `table-lines.md`: dynamic row/column line metadata.

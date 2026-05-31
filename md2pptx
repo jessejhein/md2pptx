@@ -88,6 +88,17 @@ try:
 except:
     have_graphviz = False
 
+# Try to import mmdc - which might not be installed.
+# Flag availability or otherwise
+
+try:
+    import mmdc
+    from mmdc import MermaidConverter
+
+    have_mmdc = True
+
+except:
+    have_mmdc = False
 
 
 namespaceURL = {
@@ -1511,39 +1522,99 @@ def handleWhateverGraphicType(GraphicFilename):
     return GraphicFilename, printableGraphicFilename
 
 
-def handleGraphViz(slide, renderingRectangle, codeLines, codeType):
-    # Condition GraphViz source
-    s = graphviz.Source("\n".join(codeLines), format="png")
-
-    # Invent a temporary filename for the rendered graphic
-    dotFile = "md2pptx-temporary-dotfile.png"
-
-    # Render the .dot source as a graphic
-    s.render(cleanup=True, outfile=dotFile)
-
+def addRenderedGraphic(slide, renderingRectangle, graphicFile):
     # Figure out the dimensions of the rendered graphic
-    dotGraphicWidth, dotGraphicHeight = getGraphicDimensions(dotFile)
+    graphicWidth, graphicHeight = getGraphicDimensions(graphicFile)
 
     # Adjust those dimensions with the usual scaling rules
     # Note: No <figcaption> adjustment
-    (dotPicWidth, dotPicHeight, scaledByHeight) = scalePicture(
+    (picWidth, picHeight, scaledByHeight) = scalePicture(
         renderingRectangle.width,
         renderingRectangle.height,
-        dotGraphicWidth,
-        dotGraphicHeight,
+        graphicWidth,
+        graphicHeight,
     )
 
     # Add the picture to the current slide
     slide.shapes.add_picture(
-        dotFile,
-        renderingRectangle.left + (renderingRectangle.width - dotPicWidth) / 2,
-        renderingRectangle.top + (renderingRectangle.height - dotPicHeight) / 2,
-        dotPicWidth,
-        dotPicHeight,
+        graphicFile,
+        renderingRectangle.left + (renderingRectangle.width - picWidth) / 2,
+        renderingRectangle.top + (renderingRectangle.height - picHeight) / 2,
+        picWidth,
+        picHeight,
     )
+
+
+def handleGraphViz(slide, renderingRectangle, codeLines, codeType):
+    tempDir = globals.processingOptions.getCurrentOption("tempDir")
+
+    # Condition GraphViz source
+    s = graphviz.Source("\n".join(codeLines), format="png")
+
+    # Invent a temporary filename for the rendered graphic
+    try:
+        dotFileObject = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".png", dir=tempDir
+        )
+    except IOError as e:
+        print("Couldn't create temporary file. md2pptx terminating")
+        exit()
+
+    dotFile = dotFileObject.name
+    dotFileObject.close()
+
+    # Render the .dot source as a graphic
+    s.render(cleanup=True, outfile=dotFile)
+
+    addRenderedGraphic(slide, renderingRectangle, dotFile)
 
     # Delete the temporary graphic file
     os.remove(dotFile)
+
+
+def handleMermaid(slide, renderingRectangle, codeLines, codeType):
+    tempDir = globals.processingOptions.getCurrentOption("tempDir")
+    exportGraphics = globals.processingOptions.getCurrentOption("exportGraphics")
+    converter = MermaidConverter()
+    mermaidSource = "\n".join(codeLines)
+    sourceFile = None
+    graphicFile = None
+
+    try:
+        sourceFileObject = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".mmd", dir=tempDir, mode="w", encoding="utf-8"
+        )
+        sourceFileObject.write(mermaidSource)
+        sourceFileObject.close()
+        sourceFile = sourceFileObject.name
+
+        graphicFileObject = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".png", dir=tempDir
+        )
+        graphicFile = graphicFileObject.name
+        graphicFileObject.close()
+
+        converter.convert(input=Path(sourceFile), output_file=Path(graphicFile))
+
+        if Path(graphicFile).exists() is False or Path(graphicFile).stat().st_size == 0:
+            raise RuntimeError("No Mermaid output file was created.")
+
+        addRenderedGraphic(slide, renderingRectangle, graphicFile)
+
+        return True
+
+    except Exception as e:
+        sys.stderr.write("Mermaid render failed. Rendering as backticks.\n")
+        sys.stderr.write(str(e) + "\n")
+
+        return False
+
+    finally:
+        if exportGraphics is False:
+            if sourceFile is not None and Path(sourceFile).exists():
+                os.remove(sourceFile)
+            if graphicFile is not None and Path(graphicFile).exists():
+                os.remove(graphicFile)
 
 
 def handleFunnel(slide, renderingRectangle, codeLines, codeType):
@@ -1616,6 +1687,21 @@ def createCodeBlock(slideInfo, slide, renderingRectangle, codeBlockNumber):
                     handleGraphViz(slide, renderingRectangle, codeLines[1:-1], codeType)
 
                     return slide
+
+            elif codeType.startswith("mermaid"):
+                if have_mmdc is False:
+                    sys.stderr.write(
+                        "mmdc not installed. Rendering as backticks.\n"
+                    )
+
+                    codeType = "backticks"
+                else:
+                    if handleMermaid(
+                        slide, renderingRectangle, codeLines[1:-1], codeType
+                    ):
+                        return slide
+
+                    codeType = "backticks"
 
             elif codeType.startswith("funnel"):
                 # Built-in Funnel Diagram
@@ -4712,6 +4798,11 @@ if have_graphviz:
     print("  graphviz: " + graphviz.__version__)
 else:
     print("  graphviz: Not Installed")
+
+if have_mmdc:
+    print("  mmdc: " + getattr(mmdc, "__version__", "Installed"))
+else:
+    print("  mmdc: Not Installed")
 
 print("\nInternal Dependencies:")
 print(f"\n  funnel: {funnel.version}")

@@ -52,6 +52,7 @@ As you can see in the [change log](#change-log), md2pptx is frequently updated -
 		* [Triple Backticks (```)](#triple-backticks-())
 			* [Special Processing Of Code Within Triple Backticks](#special-processing-of-code-within-triple-backticks)
 				* [GraphViz](#graphviz)
+				* [Mermaid](#mermaid)
 		* [Indented Text](#indented-text)
 		* [`<pre>`](#<pre>)
 	* [Funnels](#funnels)
@@ -1278,6 +1279,22 @@ This is how the above code is rendered
 
 
 ![](graphviz-rendered.png)
+
+<a id="mermaid"></a>
+###### Mermaid
+
+On startup md2pptx will check whether the `mmdc` Python package is installed. If it is installed you can render Mermaid diagrams inside triple backticks. If it is not installed md2pptx will warn and render the block as ordinary code.
+
+Here is an example:
+
+	```mermaid
+	flowchart TD
+	    markdown[Markdown Deck] --> md2pptx[md2pptx]
+	    md2pptx --> pptx[PowerPoint Deck]
+	    md2pptx --> review[LibreOffice Review]
+	```
+
+This will be rendered as a graphic and inserted in the current slide. The graphic will be scaled as appropriate.
 
 #### Indented Text
 
@@ -3976,6 +3993,7 @@ Known deviations are:
 * Using md2pptx's "ppaction://" URI support to [run a VBA macro](#invoking-a-vba-macro) won't work in HTML.
 * Using **outbound** hyperlinks in a heading is not standard Markdown - whether within the document or to the web.
 * [GraphViz .dot files](#graphviz) aren't rendered by most Markdown processors.
+* [Mermaid diagrams](#mermaid) aren't rendered by most Markdown processors.
 * [Funnels](#funnels) aren't rendered by any other Markdown processor.
 * [run-python functionality](#running-inline-python) isn't supported by any other Markdown processor.
 * Figure and table captions allow embed styling in md2pptx. This isn't the case in other Markdown processors.
