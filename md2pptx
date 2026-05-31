@@ -39,6 +39,7 @@ import tempfile
 import copy
 import platform
 import shutil
+import subprocess
 import socket
 from pptx.oxml import parse_xml
 import uuid
@@ -93,7 +94,6 @@ except:
 
 try:
     import mmdc
-    from mmdc import MermaidConverter
 
     have_mmdc = True
 
@@ -1575,10 +1575,11 @@ def handleGraphViz(slide, renderingRectangle, codeLines, codeType):
 def handleMermaid(slide, renderingRectangle, codeLines, codeType):
     tempDir = globals.processingOptions.getCurrentOption("tempDir")
     exportGraphics = globals.processingOptions.getCurrentOption("exportGraphics")
-    converter = MermaidConverter()
     mermaidSource = "\n".join(codeLines)
     sourceFile = None
-    graphicFile = None
+    pngFile = None
+    svgFile = None
+    convertedFile = None
 
     try:
         sourceFileObject = tempfile.NamedTemporaryFile(
@@ -1588,20 +1589,75 @@ def handleMermaid(slide, renderingRectangle, codeLines, codeType):
         sourceFileObject.close()
         sourceFile = sourceFileObject.name
 
-        graphicFileObject = tempfile.NamedTemporaryFile(
+        pngFileObject = tempfile.NamedTemporaryFile(
             delete=False, suffix=".png", dir=tempDir
         )
-        graphicFile = graphicFileObject.name
-        graphicFileObject.close()
+        pngFile = pngFileObject.name
+        pngFileObject.close()
+        os.remove(pngFile)
 
-        converter.convert(input=Path(sourceFile), output_file=Path(graphicFile))
+        svgFileObject = tempfile.NamedTemporaryFile(
+            delete=False, suffix=".svg", dir=tempDir
+        )
+        svgFile = svgFileObject.name
+        svgFileObject.close()
+        os.remove(svgFile)
 
-        if Path(graphicFile).exists() is False or Path(graphicFile).stat().st_size == 0:
-            raise RuntimeError("No Mermaid output file was created.")
+        pngResult = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "mmdc",
+                "-i",
+                sourceFile,
+                "-o",
+                pngFile,
+                "-w",
+                "1920",
+                "-s",
+                "2",
+                "-b",
+                "white",
+            ],
+            capture_output=True,
+            text=True,
+        )
 
-        addRenderedGraphic(slide, renderingRectangle, graphicFile)
+        if Path(pngFile).exists() and Path(pngFile).stat().st_size > 0:
+            addRenderedGraphic(slide, renderingRectangle, pngFile)
+            return True
 
-        return True
+        svgResult = subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "mmdc",
+                "-i",
+                sourceFile,
+                "-o",
+                svgFile,
+                "-b",
+                "white",
+            ],
+            capture_output=True,
+            text=True,
+        )
+
+        if Path(svgFile).exists() and Path(svgFile).stat().st_size > 0 and have_cairosvg:
+            convertedFileObject = tempfile.NamedTemporaryFile(
+                delete=False, suffix=".png", dir=tempDir
+            )
+            convertedFile = convertedFileObject.name
+            convertedFileObject.close()
+            cairosvg.svg2png(url=svgFile, write_to=convertedFile)
+            addRenderedGraphic(slide, renderingRectangle, convertedFile)
+            return True
+
+        errorMessage = pngResult.stdout + pngResult.stderr
+        if 'Exception:' not in errorMessage:
+            errorMessage += svgResult.stdout + svgResult.stderr
+
+        raise RuntimeError(errorMessage.strip() or "No Mermaid output file was created.")
 
     except Exception as e:
         sys.stderr.write("Mermaid render failed. Rendering as backticks.\n")
@@ -1611,10 +1667,9 @@ def handleMermaid(slide, renderingRectangle, codeLines, codeType):
 
     finally:
         if exportGraphics is False:
-            if sourceFile is not None and Path(sourceFile).exists():
-                os.remove(sourceFile)
-            if graphicFile is not None and Path(graphicFile).exists():
-                os.remove(graphicFile)
+            for filename in [sourceFile, pngFile, svgFile, convertedFile]:
+                if filename is not None and Path(filename).exists():
+                    os.remove(filename)
 
 
 def handleFunnel(slide, renderingRectangle, codeLines, codeType):

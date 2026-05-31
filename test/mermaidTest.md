@@ -6,10 +6,10 @@ A focused Mermaid smoke test for md2pptx.
 ### Flowchart
 
 ```mermaid
-flowchart TD
-    markdown[Markdown] --> parser[md2pptx]
-    parser --> deck[PowerPoint]
-    parser --> review[LibreOffice]
+graph TD
+    Markdown[Markdown] --> Parser[md2pptx]
+    Parser --> Deck[PowerPoint]
+    Parser --> Review[LibreOffice]
 ```
 
 ### Sequence
