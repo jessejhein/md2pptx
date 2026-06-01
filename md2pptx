@@ -231,7 +231,7 @@ def get_picture_rId(picture):
 # Adds a picture as a background
 def add_background(presentation, slide, picture):
     # Add the picture with zero dimensions
-    picture = slide.shapes.add_picture(picture,0,0,0,00)
+    picture = slide.shapes.add_picture(resolve_path_relative_to_input(picture),0,0,0,00)
 
     # Get the RId for this tiny picture = as we'll need that to set the background
     rId = get_picture_rId(picture)
@@ -896,6 +896,8 @@ def createShapeHyperlinkAndTooltip(shape, to_slide, tooltipText=""):
 def getGraphicDimensions(fname):
     """Determine the image type of fhandle and return its size.
     from draco"""
+    # Resolve path relative to input file
+    fname = resolve_path_relative_to_input(fname)
     try:
         with open(fname, "rb") as fhandle:
             head = fhandle.read(24)
@@ -951,8 +953,10 @@ def getVideoInfo(audioVideoInfo):
         return audioVideoInfo.width, audioVideoInfo.height, "Web", data
     else:
         # Video would be sourced from a local file
+        # Resolve path relative to input file
+        resolved_source = resolve_path_relative_to_input(audioVideoInfo.source)
         try:
-            fhandle = open(audioVideoInfo.source, "rb")
+            fhandle = open(resolved_source, "rb")
         except EnvironmentError:
             return -1, -1, "Local", None
 
@@ -2192,15 +2196,15 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
 
                     # try to create card graphic shape - to be resized later
                     card.graphicShape = slide.shapes.add_picture(
-                        card.graphic,
+                        resolve_path_relative_to_input(card.graphic),
                         Inches(0),
                         Inches(0),
                     )
-            
-                
+
+
                     if (card.mediaURL is not None) | (card.graphicTitle is not None):
                         mediaURL = card.mediaURL
-                     
+
                         graphicTitle = "" if card.graphicTitle == None else card.graphicTitle
 
                         pictureInfos.append(
@@ -3008,7 +3012,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     
             else:
                 topLeftPicture = slide.shapes.add_picture(
-                    topLeftGraphicFilename,
+                    resolve_path_relative_to_input(topLeftGraphicFilename),
                     topLeftPicX,
                     topLeftPicY,
                     topLeftPicWidth,
@@ -3130,7 +3134,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     
                 else:
                     topRightPicture = slide.shapes.add_picture(
-                        topRightGraphicFilename,
+                        resolve_path_relative_to_input(topRightGraphicFilename),
                         topRightPicX,
                         topRightPicY,
                         topRightPicWidth,
@@ -3251,7 +3255,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                 
                 else:
                     bottomLeftPicture = slide.shapes.add_picture(
-                        bottomLeftGraphicFilename,
+                        resolve_path_relative_to_input(bottomLeftGraphicFilename),
                         bottomLeftPicX,
                         bottomLeftPicY,
                         bottomLeftPicWidth,
@@ -3356,7 +3360,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                 
                     else:
                         bottomRightPicture = slide.shapes.add_picture(
-                            bottomRightGraphicFilename,
+                            resolve_path_relative_to_input(bottomRightGraphicFilename),
                             bottomRightPicX,
                             bottomRightPicY,
                             bottomRightPicWidth,
@@ -4718,6 +4722,7 @@ print(f"\n  funnel: {funnel.version}")
 print(f"  runPython: {runPython.version}")
 
 input_file = []
+input_file_dir = None  # Directory of the input markdown file
 
 if len(sys.argv) > 2:
     # Have input file as well as output file
@@ -4726,6 +4731,7 @@ if len(sys.argv) > 2:
 
     if Path(input_filename).exists():
         input_path = Path(input_filename)
+        input_file_dir = input_path.parent.resolve()  # Store the directory
 
         with input_path.open(mode='r', encoding='utf-8') as file:
             input_file = file.readlines()
@@ -4742,6 +4748,23 @@ else:
 if len(input_file) == 0:
     print("Empty input file. Terminating")
     sys.exit()
+
+# Helper function to resolve paths relative to input file
+def resolve_path_relative_to_input(path_str):
+    """
+    Resolve a path relative to the input markdown file's directory.
+    If the path is absolute or input_file_dir is None, return as-is.
+    """
+    if input_file_dir is None:
+        return path_str
+
+    path = Path(path_str)
+    if path.is_absolute():
+        return path_str
+
+    # Resolve relative to input file directory
+    resolved = (input_file_dir / path).resolve()
+    return str(resolved)
 
 slideNumber = 1
 
@@ -5737,7 +5760,12 @@ ASpresentationInserts = []
 slideTemplateFile = globals.processingOptions.getCurrentOption("slideTemplateFile")
 if slideTemplateFile != "":
     originalSlideTemplateFile = slideTemplateFile
-    if Path(os.path.expanduser(slideTemplateFile)).exists():
+
+    # Try resolving relative to input file first
+    resolved_template = resolve_path_relative_to_input(slideTemplateFile)
+    if Path(resolved_template).exists():
+        slideTemplateFile = resolved_template
+    elif Path(os.path.expanduser(slideTemplateFile)).exists():
         # We can successfully expand the path to pick up the file
         slideTemplateFile = os.path.expanduser(slideTemplateFile)
     else:
