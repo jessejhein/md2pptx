@@ -217,6 +217,19 @@ def addMissingMediaPlaceholder(slide, mediaFilename, left, top, width, height):
     
     return missingRectangle
 
+def parseBooleanMetadata(name, value):
+    valueLower = value.lower().strip()
+
+    if valueLower in ["yes", "true"]:
+        return True
+
+    if valueLower in ["no", "false"]:
+        return False
+
+    print(f"Invalid boolean value for {name}: {value}. yes/no or true/false required.")
+    return None
+
+
 def parseColorStyle(whichStyleType, name, value, colorList):
     spanClass = name[len("style." + whichStyleType) + 1 :]
 
@@ -1571,10 +1584,42 @@ def handleGraphViz(slide, renderingRectangle, codeLines, codeType):
     os.remove(dotFile)
 
 
+def buildMermaidRenderOptions():
+    mermaidPngWidth = globals.processingOptions.getCurrentOption("mermaidPngWidth")
+    mermaidGanttUseWidth = globals.processingOptions.getCurrentOption("mermaidGanttUseWidth")
+
+    if mermaidPngWidth <= 0:
+        mermaidPngWidth = None
+
+    if mermaidGanttUseWidth <= 0:
+        mermaidGanttUseWidth = None
+
+    return mermaid.MermaidRenderOptions(
+        png_width=mermaidPngWidth,
+        flowchart_html_labels=globals.processingOptions.getCurrentOption(
+            "mermaidFlowchartHtmlLabels"
+        ),
+        gantt_axis_label_regex=globals.processingOptions.getCurrentOption(
+            "mermaidGanttAxisLabelRegex"
+        ),
+        gantt_rotate_axis_labels=globals.processingOptions.getCurrentOption(
+            "mermaidGanttRotateAxisLabels"
+        ),
+        gantt_axis_label_rotation=globals.processingOptions.getCurrentOption(
+            "mermaidGanttAxisLabelRotation"
+        ),
+        gantt_use_width=mermaidGanttUseWidth,
+    )
+
+
 def handleMermaid(slide, renderingRectangle, codeLines, codeType):
     tempDir = globals.processingOptions.getCurrentOption("tempDir")
     exportGraphics = globals.processingOptions.getCurrentOption("exportGraphics")
-    renderer = mermaid.MermaidRenderer(tempDir, exportGraphics)
+    renderer = mermaid.MermaidRenderer(
+        tempDir,
+        exportGraphics,
+        buildMermaidRenderOptions(),
+    )
 
     try:
         return renderer.render_slide(
@@ -5166,6 +5211,18 @@ globals.processingOptions.setOptionValuesArray(
     ]
 )
 
+# Mermaid options
+globals.processingOptions.setOptionValuesArray(
+    [
+        ["mermaidPngWidth", 1600],
+        ["mermaidFlowchartHtmlLabels", False],
+        ["mermaidGanttAxisLabelRegex", r"\d{1,2}:\d{2}"],
+        ["mermaidGanttRotateAxisLabels", True],
+        ["mermaidGanttAxisLabelRotation", -35.0],
+        ["mermaidGanttUseWidth", 0],
+    ]
+)
+
 # Funnel options
 globals.processingOptions.setOptionValuesArray(
     [
@@ -5681,6 +5738,20 @@ for line in metadata_lines:
     elif name == "tempdir":
         globals.processingOptions.setOptionValues(name, os.path.expanduser(value))
 
+    elif name in ["mermaidpngwidth", "mermaidganttusewidth"]:
+        globals.processingOptions.setOptionValues(name, int(value))
+
+    elif name in ["mermaidflowcharthtmllabels", "mermaidganttrotateaxislabels"]:
+        booleanValue = parseBooleanMetadata(name, value)
+        if booleanValue is not None:
+            globals.processingOptions.setOptionValues(name, booleanValue)
+
+    elif name == "mermaidganttaxislabelregex":
+        globals.processingOptions.setOptionValues("mermaidGanttAxisLabelRegex", value.strip())
+
+    elif name == "mermaidganttaxislabelrotation":
+        globals.processingOptions.setOptionValues("mermaidGanttAxisLabelRotation", float(value))
+
     elif name == "transition":
         if value.lower() in [
             "none",
@@ -6118,7 +6189,8 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
             metadataKey = DMMatch.group(1).lower().strip()
             if metadataKey == "bookmark":
                 print("hekko")
-            metadataValue = DMMatch.group(2).lower()
+            metadataValueRaw = DMMatch.group(2).strip()
+            metadataValue = metadataValueRaw.lower()
 
             if (metadataKey != "") & (metadataValue != ""):
                 # Valid metadata pair so parse key / value - and apply if valid
@@ -6435,6 +6507,62 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
                         metadataKey,
                         metadataValue,
                         "",
+                    )
+
+                elif metadataKey in ["mermaidpngwidth", "mermaidganttusewidth"]:
+                    optionName = metadataKey
+                    if metadataKey == "mermaidpngwidth":
+                        optionName = "mermaidPngWidth"
+                    elif metadataKey == "mermaidganttusewidth":
+                        optionName = "mermaidGanttUseWidth"
+
+                    globals.processingOptions.dynamicallySetOption(
+                        optionName,
+                        metadataValue,
+                        "int",
+                    )
+
+                elif metadataKey in ["mermaidflowcharthtmllabels", "mermaidganttrotateaxislabels"]:
+                    optionName = metadataKey
+                    if metadataKey == "mermaidflowcharthtmllabels":
+                        optionName = "mermaidFlowchartHtmlLabels"
+                    elif metadataKey == "mermaidganttrotateaxislabels":
+                        optionName = "mermaidGanttRotateAxisLabels"
+
+                    if metadataValue in ["default", "pres", "pop", "prev"]:
+                        globals.processingOptions.dynamicallySetOption(
+                            optionName,
+                            metadataValue,
+                            "",
+                        )
+                    else:
+                        booleanValue = parseBooleanMetadata(metadataKey, metadataValueRaw)
+                        if booleanValue is not None:
+                            globals.processingOptions.dynamicallySetOption(
+                                optionName,
+                                booleanValue,
+                                "",
+                            )
+
+                elif metadataKey == "mermaidganttaxislabelregex":
+                    if metadataValue in ["default", "pres", "pop", "prev"]:
+                        globals.processingOptions.dynamicallySetOption(
+                            "mermaidGanttAxisLabelRegex",
+                            metadataValue,
+                            "",
+                        )
+                    else:
+                        globals.processingOptions.dynamicallySetOption(
+                            "mermaidGanttAxisLabelRegex",
+                            metadataValueRaw,
+                            "",
+                        )
+
+                elif metadataKey == "mermaidganttaxislabelrotation":
+                    globals.processingOptions.dynamicallySetOption(
+                        "mermaidGanttAxisLabelRotation",
+                        metadataValue,
+                        "float",
                     )
 
                 elif metadataKey == "transition":
