@@ -106,11 +106,11 @@ def showRenderingRectangle(slide, renderingRectangle):
         renderingRectangle.width,
         renderingRectangle.height
     )
-    
+
     rr.fill.background()
-    rr.line.color.rgb = RGBColor(255, 0, 0) 
-                    
-                    
+    rr.line.color.rgb = RGBColor(255, 0, 0)
+
+
 
 def namespacesFragment(prefixes):
     xml = ""
@@ -150,7 +150,7 @@ class TableInfo:
     def __init__(self, tableRows, tableCaption):
         self.rows = []
         self.caption = ""
-        
+
     def addRow(row):
         self.rows.append(row)
 
@@ -195,16 +195,16 @@ def addMissingMediaPlaceholder(slide, mediaFilename, left, top, width, height):
     adjustedLeft = int(left + borderFactor * width)
     adjustedTop = int(top +borderFactor * height)
     adjustedWidth = int(width - 2 * borderFactor * width)
-    adjustedHeight = int(height - 2 * borderFactor * height)    
+    adjustedHeight = int(height - 2 * borderFactor * height)
 
     # Create the rectangle the same size as the media would've fitted into - minus a border
     missingRectangle = slide.shapes.add_shape (MSO_SHAPE.RECTANGLE,adjustedLeft, adjustedTop, adjustedWidth, adjustedHeight)
-    
+
     # Label the rectangle with a suitable message, centred
     missingRectangle.text = "Missing Media: " + mediaFilename
     missingRectangle.text_frame.paragraphs[0].alignment = PP_ALIGN.CENTER
     missingRectangle.text_frame.paragraphs[0].font.size = Pt(10)
-    
+
     return missingRectangle
 
 def parseColorStyle(whichStyleType, name, value, colorList):
@@ -239,7 +239,7 @@ def add_background(presentation, slide, picture):
     # find the cSld element to attach the XML to
     cSld =slide._element.xpath("./p:cSld")[0]
 
-    # Remove any pre-existing bg element 
+    # Remove any pre-existing bg element
     bg =slide._element.xpath("./p:bg")
     if bg != []:
         cSld.remove(bg)
@@ -283,7 +283,7 @@ def findExtLst(prs):
 def addSlide(presentation, slideLayout, slideInfo=None):
     slide = presentation.slides.add_slide(slideLayout)
     slide.slideInfo = slideInfo
-    
+
     backgroundImage = globals.processingOptions.getCurrentOption("backgroundImage")
 
     if backgroundImage != "":
@@ -294,7 +294,7 @@ def addSlide(presentation, slideLayout, slideInfo=None):
 def createSectionsXML(prs):
     sectionSlideLayout = globals.processingOptions.getCurrentOption("SectionSlideLayout")
 
-    xml = '  <p:ext ' + namespacesFragment(["p"])  
+    xml = '  <p:ext ' + namespacesFragment(["p"])
 
     # ext URI has to be {521415D9-36F7-43E2-AB2F-B90AF26B5E84} as it's a registered extension
     xml += '    uri="{521415D9-36F7-43E2-AB2F-B90AF26B5E84}">\n'
@@ -466,7 +466,7 @@ def addTableShadow(t):
 """
     # Parse this XML
     parsed_xml = parse_xml(xml)
-    
+
     # Insert the parsed XML fragment as a child of the pPr element
     tblPr.insert(0, parsed_xml)
 
@@ -760,9 +760,9 @@ def createShadow(shape):
     el = OxmlElement("a:effectLst")
 
     spPr = shape.fill._xPr
-    
+
     spPr.append(el)
-    
+
     outerShdw = OxmlElement("a:outerShdw")
     outerShdw.set("algn", "tl")
     outerShdw.set("blurRad", "50800")
@@ -781,7 +781,7 @@ def createShadow(shape):
     alpha.set("val", "40000")
 
     prstClr.append(alpha)
-    
+
 
 # Clone a shape in a slide and return the new shape.
 # (This is a deep copy so the new shape will have the same
@@ -1144,13 +1144,13 @@ def parseTitleText(titleLineString):
 
 def addFooter(presentation, slideNumber, slide):
     numbersHeight = globals.processingOptions.getCurrentOption("numbersHeight")
-    
+
     numbersfontsizespec = globals.processingOptions.getCurrentOption("numbersFontSize")
     if numbersfontsizespec == "":
         numbersFontSize = Pt(12)
     else:
         numbersFontSize = Pt(numbersfontsizespec)
-    
+
     shapes = slide.shapes
     footer = shapes.add_textbox(
         Inches(0.1),
@@ -1181,18 +1181,13 @@ def createProcessingSummarySlide(presentation, rawMetadata):
     # Use the first slide in the template presentation as the base
     slide = presentation.slides[0]
 
-    # Delete any body shape - other than action buttons
-    bodyShape = findBodyShape(slide)
-    if bodyShape.name.startswith("Action Button:") is False:
-        deleteSimpleShape(bodyShape)
-
     # Build "run time" text
     now = datetime.datetime.now()
     runTime = now.strftime("%H:%M").lstrip()
     runDate = now.strftime("%e %B, %G").lstrip()
     runDateTime = "Presentation built: " + runTime + " on " + runDate
 
-    # Format title and add title text
+    # Format title and add title text BEFORE deleting body shape
     slideTitleBottom, title, flattenedTitle = formatTitle(
         presentation,
         slide,
@@ -1200,6 +1195,11 @@ def createProcessingSummarySlide(presentation, rawMetadata):
         pageTitleSize,
         pageSubtitleSize,
     )
+
+    # Delete any body shape - other than action buttons
+    bodyShape = findBodyShape(slide)
+    if bodyShape is not None and bodyShape.name.startswith("Action Button:") is False:
+        deleteSimpleShape(bodyShape)
 
     # Work out how many pairs of columns we need
     if globals.processingOptions.hideMetadataStyle:
@@ -2035,7 +2035,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
 
     # Get bulleted text shape - either for bullets above cards or first card's body shape
     bulletsShape = findBodyShape(slide)
-    
+
     if listBlockNumber > 0:
         bulletsShape = addClonedShape(slide, bulletsShape)
 
@@ -2075,7 +2075,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
             cardAreaHeight = renderingRectangle.height
 
         cardCount = len(slideInfo.cards)
-        
+
         ###########################################################
         # Work out card dimensions - based on the various layouts #
         ###########################################################
@@ -2134,7 +2134,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
         # cardTitleHeight to 0                                        #
         ###############################################################
         cardWithPrintableTitle = False
-        
+
         for c, card in enumerate(slideInfo.cards):
             # Check if there are any titles for any of the cards
             if card.title != "&nbsp;":
@@ -2218,7 +2218,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
 
                 except:
                     card.missingCardGraphic = True
-                    
+
                     card.graphicShape = addMissingMediaPlaceholder(slide,card.printableFilename, 0, 0, 0, 0)
 
                     print(
@@ -2252,7 +2252,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
                         "Missing card media file: "
                         + card.printableFilename
                     )
-                
+
             else:
                 # Some of this is probably not needed
                 card.graphicDimensions = None
@@ -2480,7 +2480,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
                 # graphic after
                 # Leave room below card body shape for graphic
                 cardBodyShape.top = card.bodyTop
-                
+
                 if cardLayout == "vertical":
                     cardBodyShape.width = cardWidth - 2 * cardGraphicPadding - \
                         cardGraphicSizeRaw
@@ -2505,7 +2505,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
                     cardMediaNativeWidth,
                     cardMediaNativeHeight,
                 )
-            
+
                 if cardGraphicShape is not None:
                     cardMediaShape = cardGraphicShape
                 else:
@@ -2606,7 +2606,7 @@ def createListBlock(slideInfo, slide, renderingRectangle, listBlockNumber):
         # Create any card shadow
         if cardShadow:
             createShadow(cardBackgroundShape)
-        
+
     return slide
 
 
@@ -2627,10 +2627,10 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
         # This is a table with 1 or 2 rows and 1 or 2 columns
         isGraphicsGrid = True
         gridRows = len(tableRows)
-        
+
         if gridRows == 1:
             gridColumns = len(tableRows[0])
-        
+
         else:
             gridColumns = max(len(tableRows[0]), len(tableRows[1]))
 
@@ -2750,24 +2750,24 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
         bottomRightMediaMissing = False
         leftMediaMissing = False
         rightMediaMissing = False
-        
+
         if topLeftGraphicFilename != "":
             topLeftMediaWidth, topLeftMediaHeight = getGraphicDimensions(
                 topLeftGraphicFilename
             )
-            
+
             if topLeftMediaWidth == -1:
                 if gridRows == 2:
                     print(
                         "Missing top left image file: "
                         + printableTopLeftGraphicFilename
                     )
-                    
+
                     topLeftMediaMissing = True
-                
+
                 else:
                     print("Missing left image file: " + printableTopLeftGraphicFilename)
-                    
+
                     leftMediaMissing = True
 
                 #return slide
@@ -2786,12 +2786,12 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         "Missing top left video file: "
                         + printableTopLeftGraphicFilename
                     )
-                    
+
                     topLeftMediaMissing = True
-                
+
                 else:
                     print("Missing left video file: " + printableTopLeftGraphicFilename)
-                    
+
                     leftMediaMissing = True
 
         if gridColumns == 2:
@@ -2800,22 +2800,22 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                 topRightMediaWidth, topRightMediaHeight = getGraphicDimensions(
                     topRightGraphicFilename
                 )
-                
+
                 if topRightMediaWidth == -1:
                     if gridRows == 2:
                         print(
                             "Missing top right image file: "
                             + printableTopRightGraphicFilename
                         )
-                        
+
                         topRightMediaMissing = True
-                        
+
                     else:
                         print(
                             "Missing right image file: "
                             + printableTopRightGraphicFilename
                         )
-                        
+
                         rightMediaMissing = True
 
             elif topRightVideo is not None:
@@ -2855,7 +2855,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         "Missing bottom left image file: "
                         + printableBottomLeftGraphicFilename
                     )
-                    
+
                     bottomLeftMediaMissing = True
 
             elif bottomLeftVideo is not None:
@@ -2953,9 +2953,9 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
         figCapCount = len(figCaps)
 
         figCapHeight = Inches(0.3)
-        
+
         topLeftFigCapHeight = figCapHeight if figureNumber < figCapCount else 0
-        
+
         if (topLeftGraphicFilename != "") | (topLeftVideo is not None):
             # Establish dimensions, taking into account any <figcaption>
             (
@@ -3009,7 +3009,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     maxPicWidth,
                     maxPicHeight - Inches(0.2)
                 )
-                    
+
             else:
                 topLeftPicture = slide.shapes.add_picture(
                     resolve_path_relative_to_input(topLeftGraphicFilename),
@@ -3030,7 +3030,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         "",
                     )
                 )
-                
+
                 if len(figureCaptions) > 0:
                     topLeftFigCap = slide.shapes.add_textbox(topLeftPicX,
                         renderingRectangle.bottom - topLeftFigCapHeight,
@@ -3040,7 +3040,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     topLeftFigCapTF = topLeftFigCap.text_frame
                     topLeftFigCapP = topLeftFigCapTF.paragraphs[0]
                     addFormattedText(topLeftFigCapP, f"*{figureCaptions[-1]}")
-                    
+
                     topLeftFigCapP.font.size = Pt(16)
 
         elif topLeftVideo is not None:
@@ -3131,7 +3131,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         maxPicWidth,
                         maxPicHeight - Inches(0.2)
                     )
-                    
+
                 else:
                     topRightPicture = slide.shapes.add_picture(
                         resolve_path_relative_to_input(topRightGraphicFilename),
@@ -3163,7 +3163,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         maxPicWidth,
                         maxPicHeight - Inches(0.2)
                     )
-                    
+
                 else:
                     if topRightVideoType == "Local":
                         # Can use local file directly
@@ -3252,7 +3252,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                         maxPicWidth,
                         maxPicHeight - Inches(0.2)
                     )
-                
+
                 else:
                     bottomLeftPicture = slide.shapes.add_picture(
                         resolve_path_relative_to_input(bottomLeftGraphicFilename),
@@ -3357,7 +3357,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                             maxPicWidth,
                             maxPicHeight - Inches(0.2)
                         )
-                
+
                     else:
                         bottomRightPicture = slide.shapes.add_picture(
                             resolve_path_relative_to_input(bottomRightGraphicFilename),
@@ -3491,12 +3491,12 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
 
         if tableHasCaption:
             tableCaptionAtBottom = not tableCaptionAtTop
-            
+
             if tableCaptionAtBottom:
                 # Add another row for the caption
                 rows += 1
-        
-            
+
+
         # Create the table with the above number of rows and columns
         newTableShape = slide.shapes.add_table(
             rows,
@@ -3506,7 +3506,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
             0,
             0
         )
-        
+
         newTable = newTableShape.table
 
         if tableHasCaption & tableCaptionAtTop:
@@ -3533,7 +3533,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                 globals.tableNumber += 1
             else:
                 captionMarkdown = f"*{tableCaptions[tableBlockNumber]}*"
-            
+
             if tableCaptionAtTop:
                 captionShape = slide.shapes.add_textbox(
                     renderingRectangle.left,
@@ -3568,7 +3568,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                tableCaptionBlurb = " and caption"
 
         rowCountBlurb =str(rows - tableHasCaption)
-        
+
         print(
             "           --> "
             + rowCountBlurb
@@ -3591,7 +3591,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
 
         # Fill in the cells
         cellsWithExplicitBoxStyle = []
-        
+
         for rowNumber, row in enumerate(tableRows):
             # Add dummy cells to the end of the row so that there are as many
             # cells in the row as there are columns in the table
@@ -3652,7 +3652,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
 
                 # Add the cell text, respecting formatting
                 addFormattedText(p, cell)
-                
+
                 # Potentially colour cell background
                 firstSpanClassWithCellColor = None
 
@@ -3663,7 +3663,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     if className in globals.cellcolors:
                         # First <span> of cell text specifies cellcolor
                         firstSpanClassWithCellColor = className
-                        
+
                         # Don't search any further
                         break
 
@@ -3692,7 +3692,7 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     if className in globals.cellBorderStyling:
                         # First <span> of cell text specifies cellBorderStyling
                         firstSpanClassWithCellBorderStyling = className
-                        
+
                         # Don't search any further
                         break
 
@@ -3708,13 +3708,13 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
         if tableHasCaption:
             if tableCaptionAtBottom:
                 captionRow = newTable.rows[len(newTable.rows)-1]
-                
+
                 # Following has no effect - so commented out
                 # captionRow.height = tableCaptionHeight
-                
+
                 captionCell = captionRow.cells[0]
                 p = captionCell.text_frame.paragraphs[0]
-                
+
                 if tableCaptionAlignment == "r":
                     p.alignment = PP_ALIGN.RIGHT
                 elif tableCaptionAlignment == "c":
@@ -3723,10 +3723,10 @@ def createTableBlock(slideInfo, slide, renderingRectangle, tableBlockNumber):
                     p.alignment = PP_ALIGN.LEFT
 
                 addFormattedText(p, captionMarkdown)
-                
+
                 lastCell = captionRow.cells[len(captionRow.cells) - 1]
                 lastCell.merge(captionCell)
-                
+
                 captionCellFill = captionCell   .fill
                 captionCellFill.background()
 
@@ -4180,7 +4180,7 @@ def createSlide(presentation, slideNumber, slideInfo):
         footerFontSize = Pt(8.0)
     else:
         footerFontSize = Pt(footerfontsizespec)
-    
+
     footerBoxTop = prs.slide_height - numbersHeight / 2 - footerFontSize
     footerBoxHeight = footerFontSize * 2
 
@@ -4271,7 +4271,7 @@ def createSlide(presentation, slideNumber, slideInfo):
     sequence = []
 
     addSlideTransition(slide, transition)
-    
+
     if hidden:
         slide._element.set('show', '0')
     else:
@@ -4405,7 +4405,7 @@ def createTaskSlides(prs, slideNumber, tasks, titleStem):
                     [''],
                     [],
                 )
-                
+
                 slide = createContentSlide(prs, slideNumber, slideInfo)
 
                 # Fix up references to be active links to the slide where the task
@@ -4460,7 +4460,7 @@ def createTaskSlides(prs, slideNumber, tasks, titleStem):
         [''],
         [],
     )
-        
+
     slide = createContentSlide(prs, slideNumber, slideInfo)
 
     # Fix up references to be active links to the slide where the task
@@ -4611,7 +4611,7 @@ def createFootnoteSlides(prs, slideNumber, footnoteDefinitions):
                     [''],
                     [],
                 )
-                
+
                 slideNumber, slide, sequence = createSlide(prs, slideNumber, slideInfo)
 
                 footnoteSlides.append(slide)
@@ -4638,7 +4638,7 @@ def createFootnoteSlides(prs, slideNumber, footnoteDefinitions):
             str(footnoteNumber + 1) + ". " + footnoteDefinitions[footnoteNumber][1],
             "bullet",
         ])
-        
+
         bullets[-1] = lastBulletList
     # Print a final "footnote" slide
     footnotesSlideNumber += 1
@@ -5590,7 +5590,7 @@ for line in metadata_lines:
 
         elif name.startswith("style.fontsize."):
             spanClass = name[15:]
-        
+
             # Assumed "px" on the end
             value2 = value[:-2]
             globals.fontsizes[spanClass] = value2
@@ -5699,18 +5699,18 @@ for line in metadata_lines:
 
     elif name == "applescript":
         globals.processingOptions.setOptionValues(name, value)
-        
+
     elif name == "applescriptoptions":
         for option in value.split():
             if option == "reload":
                 globals.processingOptions.setOptionValues("applescriptReload", True)
-        
+
             if option == "run":
                 globals.processingOptions.setOptionValues("applescriptRun", True)
-        
+
     elif name == "bookmark":
         globals.processingOptions.setOptionValues(name, int(value))
-        
+
     elif name in ["applescriptprolog", "applescriptprologue"]:
         if value[:1] == "!":
             prologFile = md2pptx_path + os.sep + "applescript" + os.sep + value[1:]
@@ -5720,7 +5720,7 @@ for line in metadata_lines:
         applescriptPrologueFiles = globals.processingOptions.getCurrentOption("applescriptprologue")
         applescriptPrologueFiles.append(prologFile)
         globals.processingOptions.setOptionValues("applescriptprologue", applescriptPrologueFiles)
-        
+
     elif name in ["applescriptepilog", "applescriptepilogue"]:
         if value[:1] == "!":
             epilogFile = md2pptx_path + os.sep + "applescript" + os.sep + value[1:]
@@ -5730,14 +5730,14 @@ for line in metadata_lines:
         applescriptEpilogueFiles = globals.processingOptions.getCurrentOption("applescriptepilogue")
         applescriptEpilogueFiles.append(epilogFile)
         globals.processingOptions.setOptionValues("applescriptepilogue", applescriptEpilogueFiles)
-        
+
 # Add any prologue file contents to the AppleScript that will be generated
 if (applescriptPrologueFiles := globals.processingOptions.getCurrentOption("applescriptprologue")) is not []:
     for prologueFile in applescriptPrologueFiles:
         try:
             with open(prologueFile, 'r') as pf:
                 pfLines = pf.readlines()
-                
+
                 for pfLine in pfLines:
                     if pfLine.rstrip("\n") != "":
                         pfLine = pfLine.rstrip("\n")
@@ -6077,7 +6077,7 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
     elif line.startswith("<!-- md2pptx: "):
         # Dynamic metadata line
         inTitle = False
-        
+
         if DMMatch := dynamicMetadata2Regex.match(line):
             metadataKey = DMMatch.group(1).lower().strip()
             if metadataKey == "bookmark":
@@ -6498,7 +6498,7 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
 
             # No bullets for the card yet
             cardBullets = []
-            
+
             # No graphic for the card yet
             cardGraphic = ""
 
@@ -6508,7 +6508,7 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
             card.bullets = cardBullets
             card.graphic = cardGraphic
             cards.append(card)
-            
+
             # Might have octothorpes but isn't a title
             inTitle = False
 
@@ -6598,7 +6598,7 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
         listItemLevel = calculateIndentationLevel(
             match.start(2), globals.processingOptions.getCurrentOption("indentSpaces")
         )
-        
+
         if inCard:
             # Bullet is on a card
             cardBullets.append([listItemLevel, listItemLine, listItemType])
@@ -6614,7 +6614,7 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
             else:
                 bulletList = bullets[-1]
                 bulletList.append([listItemLevel, listItemLine, listItemType])
-                bullets[-1] = bulletList                
+                bullets[-1] = bulletList
 
         if inList is False:
             sequence.append("list")
@@ -6632,12 +6632,12 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
                 if clickableGraphicMatch := clickableGraphicRegex.match(line):
                     # Line contains a clickable graphic
                     cards[-1].graphicTitle = clickableGraphicMatch.group(1)
-                    
+
                     (
                         cards[-1].graphic,
                         cards[-1].printableFilename,
                     ) = handleWhateverGraphicType(clickableGraphicMatch.group(2))
-                    
+
                     cards[-1].mediaURL = clickableGraphicMatch.group(3)
 
                 elif videoRegexMatch := videoRegex.match(line):
@@ -6666,9 +6666,9 @@ for lineNumber, line in enumerate(linesAfterConcatenation):
             else:
                 # Cell contains a non-clickable graphic
                 graphicMatch = graphicRegex.match(line)
-                
+
                 cards[-1].graphicTitle = graphicMatch.group(1)
-                
+
                 (
                     cards[-1].graphic,
                     cards[-1].printableFilename,
@@ -6836,13 +6836,13 @@ if len(globals.footnoteDefinitions) > 0:
     for footnoteRun in globals.footnoteRunsDictionary.keys():
         footnoteNumber += 1
         runs = globals.footnoteRunsDictionary[footnoteRun]
-        
+
         # Handle both single run (old format) and multiple runs (new format)
         if isinstance(runs, list):
             run_list = runs
         else:
             run_list = [runs]
-        
+
         footnoteSlideNumber = int(footnoteNumber / footnotesPerPage)
         for run in run_list:
             createRunHyperlinkOrTooltip(run, footnoteSlides[footnoteSlideNumber], "")
@@ -6997,13 +6997,13 @@ if globals.processingOptions.getCurrentOption("sectionArrows"):
 xrefCheck_errors = False
 for href in globals.href_runs.keys():
     runs = globals.href_runs[href]
-    
+
     # Handle both single run (old format) and multiple runs (new format)
     if isinstance(runs, list):
         run_list = runs
     else:
         run_list = [runs]
-    
+
     if href in slideHrefs.keys():
         for run in run_list:
             createRunHyperlinkOrTooltip(
@@ -7071,16 +7071,16 @@ if onPresentationAfterSave != "":
 
 # Create any AppleScript
 if applescriptFilename != "":
-    
+
     want_save = False
-    
+
     want_reload = globals.processingOptions.getCurrentOption("applescriptReload")
     want_run = globals.processingOptions.getCurrentOption("applescriptRun")
 
     # Maybe add "save presentation" code
     if want_save:
         globals.applescriptLines.append("        save")
-    
+
     if want_reload:
         globals.applescriptLines.append("            close front document window")
 
@@ -7121,7 +7121,7 @@ if applescriptFilename != "":
 
     applescriptEpilogueFiles = globals.processingOptions.getCurrentOption("applescriptepilogue")
 
-    
+
     # Handle any instructions to insert slides from other presentations
     if ASpresentationInserts is not []:
         if templateSlideCount > 0:
@@ -7134,17 +7134,17 @@ if applescriptFilename != "":
         # Plant calls to copySlides() - in reverse order to maintain slide numbers in the target presentation
         for copyInstruction in reversed(ASpresentationInserts):
             slideAfter, sourcePresentation = copyInstruction
-            
+
             slideAfter += slideNumberAdjustment
-            
+
             if sourcePresentation[:1] != os.sep:
                 sourcePresentation = target_path + os.sep + sourcePresentation
 
             globals.applescriptLines.append(f"\ncopySlides(\"{sourcePresentation}\", targetPresentation,  {slideAfter}, \"yes\")")
-    
+
         # Ensure applescript to copy slides from one presentation to another is present
         copyPresentationAS = md2pptx_path + os.sep + "applescript" + os.sep + "copyPresentation.applescript"
-        
+
         applescriptEpilogueFiles.append(copyPresentationAS)
 
     # Add any epilogue file contents to the AppleScript that will be generated
@@ -7155,7 +7155,7 @@ if applescriptFilename != "":
             try:
                 with open(epilogueFile, 'r') as ef:
                     efLines = ef.readlines()
-                    
+
                     for efLine in efLines:
                         if efLine.rstrip("\n") != "":
                             efLine = efLine.rstrip("\n")
