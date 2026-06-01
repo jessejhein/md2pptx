@@ -38,7 +38,7 @@ The project has `pyproject.toml` and `uv.lock` with the needed runtime dependenc
 
 GraphViz requires both the system Graphviz executable and the Python `graphviz` package.
 
-Mermaid rendering uses the Python `mmdc` package. If `mmdc` is unavailable, ` ```mermaid ` blocks warn and fall back to ordinary code rendering.
+Mermaid rendering uses the Python `mmdc` package. If `mmdc` is unavailable, ` ```mermaid ` blocks warn and fall back to ordinary code rendering. Mermaid renders SVG-first, uses `flowchart.htmlLabels=false` by default so CairoSVG preserves text, and converts to PNG with CairoSVG.
 
 ## LibreOffice Testing
 
@@ -71,11 +71,22 @@ Prefer feature-rich but stable markdown:
 - Use absolute local paths for test assets to avoid cwd ambiguity.
 - Use ` ```dot ` blocks for GraphViz diagrams.
 - Use ` ```mermaid ` blocks for Mermaid diagrams.
+- For Mermaid flowcharts, rely on the default `mermaidFlowchartHtmlLabels: no`; HTML labels can render as boxes without text after CairoSVG conversion.
+- For Mermaid Gantt charts, the default cleanup removes time-like axis labels matching `\d{1,2}:\d{2}` and rotates remaining axis labels. Tune with `mermaidGanttAxisLabelRegex`, `mermaidGanttRotateAxisLabels`, and `mermaidGanttAxisLabelRotation`.
+- Use `mermaidPngWidth` to control raster sharpness. Default is `1600`; this does not change Mermaid layout. Use `mermaidGanttUseWidth` only when you intentionally want to stretch Gantt layout.
 - Use documented image layouts: one image, two side-by-side images, two-over-one, one-over-two, two-by-two, or one-over-one.
 - Avoid single-row three-image tables. They may render as literal `!` markers.
 - Use `<figcaption>` only immediately below a single image.
 - Put table captions immediately after the last table row with no blank line.
 - Use inline Python only when needed, and keep it small.
+
+Good Mermaid coding-session scenarios:
+
+- Service or package flowcharts: browser, frontend, API, worker, cache, database.
+- Request sequence diagrams: developer, CLI, parser, renderer, PowerPoint review.
+- Deployment or incident state machines: queued, deploying, failed, rolled back, recovered.
+- Data models: user, repository, build, artifact, review event.
+- Gantt release plans: parser work, regression checks, docs, review.
 
 Good GraphViz coding-session scenarios:
 
@@ -95,6 +106,7 @@ Fixed areas:
 - `addTableLines: both` is accepted as the documented alias for all-cell-edge table lines.
 - Dynamic card graphic metadata accepts `cardGraphicSize`, `cardGraphicPadding`, and `cardGraphicPosition` case-insensitively, then stores canonical camelCase option names.
 - Dynamic funnel metadata accepts documented `funnelLabelsPosition` plus singular `funnelLabelPosition`, parses dynamic funnel colours through `parseColour()`, and stores canonical camelCase option names.
+- Mermaid uses SVG-first rendering via `mmdc.to_svg()`, CairoSVG PNG conversion, `flowchart.htmlLabels=false`, configurable `mermaidPngWidth`, and conservative Gantt axis post-processing.
 
 Remaining intentional exclusions:
 

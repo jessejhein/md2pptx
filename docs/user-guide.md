@@ -1294,7 +1294,22 @@ Here is an example:
 	    md2pptx --> review[LibreOffice Review]
 	```
 
-This will be rendered as a graphic and inserted in the current slide. The graphic will be scaled as appropriate.
+This will be rendered as a graphic and inserted in the current slide. The graphic will be scaled as appropriate. md2pptx renders Mermaid through SVG first, applies any supported SVG post-processing, then converts the SVG to PNG with CairoSVG for insertion into PowerPoint.
+
+Mermaid flowcharts default to SVG text labels rather than HTML labels. This differs from Mermaid's own default, but it avoids CairoSVG producing boxes without readable text.
+
+The following metadata controls Mermaid rendering. These can be set at the top of the deck or changed with dynamic metadata.
+
+| Metadata | Default | Meaning |
+| --- | --- | --- |
+| `mermaidPngWidth` | `1600` | CairoSVG output width for Mermaid PNGs. This sharpens raster output without changing Mermaid layout. Use `0` to disable. |
+| `mermaidFlowchartHtmlLabels` | `no` | Whether Mermaid flowcharts use HTML labels. The default `no` is recommended for CairoSVG compatibility. |
+| `mermaidGanttAxisLabelRegex` | `\d{1,2}:\d{2}` | Full-match regex for Gantt axis labels to remove before rendering, such as `12:00`. Use an empty value to disable removal. |
+| `mermaidGanttRotateAxisLabels` | `yes` | Whether remaining Gantt axis labels are rotated after regex removal. |
+| `mermaidGanttAxisLabelRotation` | `-35` | Rotation angle for remaining Gantt axis labels. |
+| `mermaidGanttUseWidth` | `0` | Advanced Mermaid Gantt layout width. Values greater than zero set Mermaid's `gantt.useWidth`; `0` disables it. This can reduce crowding but may make diagrams too wide. |
+
+Mermaid support currently uses the Python `mmdc` package, which bundles an older Mermaid release. Basic diagrams such as flowcharts, sequence diagrams, class diagrams, state diagrams, entity-relationship diagrams, and Gantt charts are the intended use. Modern Mermaid-only syntax may not be supported by that bundled version.
 
 #### Indented Text
 
