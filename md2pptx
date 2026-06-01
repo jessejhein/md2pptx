@@ -4856,7 +4856,7 @@ slideNumber = 1
 
 bulletRegex = re.compile(r"^(\s)*(\*)(.*)")
 numberRegex = re.compile(r"^(\s)*(\d+)\.(.*)")
-metadataRegex = re.compile("^(.+):(.+)")
+metadataRegex = re.compile("^([^:]+):(.+)")
 
 graphicRE = r"!\[(.*?)\]\((.+?)\)"
 graphicRegex = re.compile(graphicRE)
@@ -4874,7 +4874,7 @@ linkRegex = re.compile(r"^\[(.+)\]\((.+)\)")
 footnoteDefinitionRegex = re.compile(r"^\[\^(.+?)\]: (.+)")
 slideHrefRegex = re.compile(r"(.+)\[(.+)\]$")
 anchorRegex = re.compile("^<a id=[\"'](.+)[\"']></a>")
-dynamicMetadata2Regex = re.compile("^<!-- md2pptx: (.+): (.+) -->")
+dynamicMetadata2Regex = re.compile("^<!-- md2pptx: ([^:]+): (.+) -->")
 dynamicMetadata1Regex = re.compile("^<!-- md2pptx: (.+) -->")
 indirectReferenceAnchorRegex = re.compile(r"^\[(.+?)\]: (.+)")
 indirectReferenceUsageRegex = re.compile(r"[(.+?)]\[(.+?)]")
